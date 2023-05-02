@@ -1,0 +1,54 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   restart_mode     = 'from_scratch'
+   tstress          = .true.
+   tprnfor          = .true.
+   tefield          = .true.
+   dipfield         = .true.
+/
+&SYSTEM
+   ecutwfc          = 60
+   ecutrho          = 480
+   occupations      = 'smearing'
+   degauss          = 0.01
+   smearing         = 'gaussian'
+   input_dft        = 'vdw-df2-b86r'
+   edir             = 3
+   emaxpos          = 0.1
+   eopreg           = 0.1
+   eamp             = 0.0
+   ntyp             = 2
+   nat              = 4
+   ibrav            = 0
+/
+&ELECTRONS
+   electron_maxstep = 100
+   conv_thr         = 1e-09
+   mixing_mode      = 'plain'
+   mixing_beta      = 0.7
+   diagonalization  = 'david'
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+B 10.81 b_pbe_v1.4.uspp.F.UPF
+H 1.008 h_pbe_v1.4.uspp.F.UPF
+
+K_POINTS automatic
+16 16 1  0 0 0
+
+CELL_PARAMETERS angstrom
+3.01334560600000 -0.01081257800000 0.00000000000000
+1.51624390400000 2.64064081500000 0.00000000000000
+0.00000000000000 0.00000000000000 19.99999313700000
+
+ATOMIC_POSITIONS angstrom
+B 0.0000000000 0.0000000000 10.1000000000 
+B 1.5095184590 0.8128148640 10.1000000000 
+H 1.5129023860 1.7268343320 11.0673950600 
+H 1.5129023860 1.7268343320 9.1326049400 
+
