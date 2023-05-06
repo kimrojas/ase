@@ -372,6 +372,7 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
             magmoms=magmoms,
             efermi=efermi,
             ibzkpts=ibzkpts,
+            dipole=dipole,
         )
         calc.kpts = kpts
         structure.calc = calc
