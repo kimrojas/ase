@@ -209,7 +209,10 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
             # should be same format as input card
             n_atoms = len(prev_structure)
             positions_card = get_atomic_positions(
-                pwo_lines[image_index : image_index + n_atoms + 1], n_atoms=n_atoms, cell=cell, alat=cell_alat
+                pwo_lines[image_index : image_index + n_atoms + 1],
+                n_atoms=n_atoms,
+                cell=cell,
+                alat=cell_alat,
             )
 
             # convert to Atoms object
@@ -247,7 +250,7 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
         for dipole_index in indexes[_PW_DIPOLE]:
             if image_index < dipole_index < next_index:
                 _dipole = pwo_lines[dipole_index].split()[-2]
-                dipole = np.array([0.0, 0.0, _dipole])
+                dipole = np.array([0.0, 0.0, _dipole], dtype=np.float64) * units["Debye"]
 
         # Stress
         stress = None
@@ -351,7 +354,10 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
 
                 if spin == 1:
                     assert len(eigenvalues[0]) == len(eigenvalues[1])
-                assert len(eigenvalues[0]) == len(ibzkpts), (np.shape(eigenvalues), len(ibzkpts))
+                assert len(eigenvalues[0]) == len(ibzkpts), (
+                    np.shape(eigenvalues),
+                    len(ibzkpts),
+                )
 
                 kpts = []
                 for s in range(spin + 1):
@@ -439,14 +445,25 @@ def parse_pwo_start(lines, index=0):
             for at_line in lines[idx + 1 : idx + 1 + info["nat"]]:
                 sym, x, y, z = parse_position_line(at_line)
                 info["symbols"].append(label_to_symbol(sym))
-                info["positions"].append([x * info["celldm(1)"], y * info["celldm(1)"], z * info["celldm(1)"]])
+                info["positions"].append(
+                    [
+                        x * info["celldm(1)"],
+                        y * info["celldm(1)"],
+                        z * info["celldm(1)"],
+                    ]
+                )
             # This should be the end of interesting info.
             # Break here to avoid dealing with large lists of kpoints.
             # Will need to be extended for DFTCalculator info.
             break
 
     # Make atoms for convenience
-    info["atoms"] = Atoms(symbols=info["symbols"], positions=info["positions"], cell=info["cell"], pbc=True)
+    info["atoms"] = Atoms(
+        symbols=info["symbols"],
+        positions=info["positions"],
+        cell=info["cell"],
+        pbc=True,
+    )
 
     return info
 
@@ -537,7 +554,12 @@ def read_espresso_in(fileobj):
         # starting_magnetization is in fractions of valence electrons
         magnet_key = "starting_magnetization({0})".format(ispec + 1)
         magmom = valence * data["system"].get(magnet_key, 0.0)
-        species_info[symbol] = {"weight": weight, "pseudo": pseudo, "valence": valence, "magmom": magmom}
+        species_info[symbol] = {
+            "weight": weight,
+            "pseudo": pseudo,
+            "valence": valence,
+            "magmom": magmom,
+        }
 
     positions_card = get_atomic_positions(card_lines, n_atoms=data["system"]["nat"], cell=cell, alat=alat)
 
@@ -633,12 +655,24 @@ def ibrav_to_cell(system):
         cell = np.array([[1.0, 0.0, 0.0], [0.0, b_over_a, 0.0], [0.0, 0.0, c_over_a]]) * alat
     elif system["ibrav"] == 9:
         cell = (
-            np.array([[1.0 / 2.0, b_over_a / 2.0, 0.0], [-1.0 / 2.0, b_over_a / 2.0, 0.0], [0.0, 0.0, c_over_a]])
+            np.array(
+                [
+                    [1.0 / 2.0, b_over_a / 2.0, 0.0],
+                    [-1.0 / 2.0, b_over_a / 2.0, 0.0],
+                    [0.0, 0.0, c_over_a],
+                ]
+            )
             * alat
         )
     elif system["ibrav"] == -9:
         cell = (
-            np.array([[1.0 / 2.0, -b_over_a / 2.0, 0.0], [1.0 / 2.0, b_over_a / 2.0, 0.0], [0.0, 0.0, c_over_a]])
+            np.array(
+                [
+                    [1.0 / 2.0, -b_over_a / 2.0, 0.0],
+                    [1.0 / 2.0, b_over_a / 2.0, 0.0],
+                    [0.0, 0.0, c_over_a],
+                ]
+            )
             * alat
         )
     elif system["ibrav"] == 10:
@@ -665,10 +699,28 @@ def ibrav_to_cell(system):
         )
     elif system["ibrav"] == 12:
         sinab = (1.0 - cosab**2) ** 0.5
-        cell = np.array([[1.0, 0.0, 0.0], [b_over_a * cosab, b_over_a * sinab, 0.0], [0.0, 0.0, c_over_a]]) * alat
+        cell = (
+            np.array(
+                [
+                    [1.0, 0.0, 0.0],
+                    [b_over_a * cosab, b_over_a * sinab, 0.0],
+                    [0.0, 0.0, c_over_a],
+                ]
+            )
+            * alat
+        )
     elif system["ibrav"] == -12:
         sinac = (1.0 - cosac**2) ** 0.5
-        cell = np.array([[1.0, 0.0, 0.0], [0.0, b_over_a, 0.0], [c_over_a * cosac, 0.0, c_over_a * sinac]]) * alat
+        cell = (
+            np.array(
+                [
+                    [1.0, 0.0, 0.0],
+                    [0.0, b_over_a, 0.0],
+                    [c_over_a * cosac, 0.0, c_over_a * sinac],
+                ]
+            )
+            * alat
+        )
     elif system["ibrav"] == 13:
         sinab = (1.0 - cosab**2) ** 0.5
         cell = (
@@ -803,10 +855,19 @@ def get_atomic_positions(lines, n_atoms, cell=None, alat=None):
                 split_line = next(trimmed_lines).split()
                 # These can be fractions and other expressions
                 position = np.dot(
-                    (infix_float(split_line[1]), infix_float(split_line[2]), infix_float(split_line[3])), cell
+                    (
+                        infix_float(split_line[1]),
+                        infix_float(split_line[2]),
+                        infix_float(split_line[3]),
+                    ),
+                    cell,
                 )
                 if len(split_line) > 4:
-                    force_mult = (float(split_line[4]), float(split_line[5]), float(split_line[6]))
+                    force_mult = (
+                        float(split_line[4]),
+                        float(split_line[5]),
+                        float(split_line[6]),
+                    )
                 else:
                     force_mult = None
 
@@ -847,7 +908,13 @@ def get_atomic_species(lines, n_species):
             species = []
             for _dummy in range(n_species):
                 label_weight_pseudo = next(trimmed_lines).split()
-                species.append((label_weight_pseudo[0], float(label_weight_pseudo[1]), label_weight_pseudo[2]))
+                species.append(
+                    (
+                        label_weight_pseudo[0],
+                        float(label_weight_pseudo[1]),
+                        label_weight_pseudo[2],
+                    )
+                )
 
     return species
 
@@ -1370,7 +1437,17 @@ KEYS = Namelist(
                 "w_2",
             ],
         ),
-        ("CELL", ["cell_dynamics", "press", "wmass", "cell_factor", "press_conv_thr", "cell_dofree"]),
+        (
+            "CELL",
+            [
+                "cell_dynamics",
+                "press",
+                "wmass",
+                "cell_factor",
+                "press_conv_thr",
+                "cell_dofree",
+            ],
+        ),
     )
 )
 
@@ -1732,14 +1809,22 @@ def kspacing_to_grid(atoms, spacing, calculated_spacing=None):
     # reciprocal dimensions
     r_x, r_y, r_z = np.linalg.norm(atoms.cell.reciprocal(), axis=1)
 
-    kpoint_grid = [int(r_x / spacing) + 1, int(r_y / spacing) + 1, int(r_z / spacing) + 1]
+    kpoint_grid = [
+        int(r_x / spacing) + 1,
+        int(r_y / spacing) + 1,
+        int(r_z / spacing) + 1,
+    ]
 
     for i, _ in enumerate(kpoint_grid):
         if not atoms.pbc[i]:
             kpoint_grid[i] = 1
 
     if calculated_spacing is not None:
-        calculated_spacing[:] = [r_x / kpoint_grid[0], r_y / kpoint_grid[1], r_z / kpoint_grid[2]]
+        calculated_spacing[:] = [
+            r_x / kpoint_grid[0],
+            r_y / kpoint_grid[1],
+            r_z / kpoint_grid[2],
+        ]
 
     return kpoint_grid
 
@@ -1889,7 +1974,10 @@ def write_espresso_in(
                 input_parameters["system"][mag_str] = fspin
                 atomic_species_str.append(
                     "{species}{tidx} {mass} {pseudo}\n".format(
-                        species=atom.symbol, tidx=tidx, mass=atom.mass, pseudo=species_info[atom.symbol]["pseudo"]
+                        species=atom.symbol,
+                        tidx=tidx,
+                        mass=atom.mass,
+                        pseudo=species_info[atom.symbol]["pseudo"],
                     )
                 )
             # lookup tidx to append to name
@@ -1915,7 +2003,9 @@ def write_espresso_in(
                 atomic_species[atom.symbol] = True  # just a placeholder
                 atomic_species_str.append(
                     "{species} {mass} {pseudo}\n".format(
-                        species=atom.symbol, mass=atom.mass, pseudo=species_info[atom.symbol]["pseudo"]
+                        species=atom.symbol,
+                        mass=atom.mass,
+                        pseudo=species_info[atom.symbol]["pseudo"],
                     )
                 )
 
