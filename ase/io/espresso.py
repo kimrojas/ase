@@ -49,6 +49,7 @@ _PW_KPTS = "number of k points="
 _PW_BANDS = _PW_END
 _PW_BANDSTRUCTURE = "End of band structure calculation"
 _PW_DIPOLE = "Dipole    "
+_PW_DIPOLE_DIRECTION = "Computed dipole along edir"
 
 
 class Namelist(OrderedDict):
@@ -122,6 +123,7 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
         _PW_BANDS: [],
         _PW_BANDSTRUCTURE: [],
         _PW_DIPOLE: [],
+        _PW_DIPOLE_DIRECTION: [],
     }
 
     for idx, line in enumerate(pwo_lines):
@@ -250,7 +252,13 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
         for dipole_index in indexes[_PW_DIPOLE]:
             if image_index < dipole_index < next_index:
                 _dipole = pwo_lines[dipole_index].split()[-2]
-                dipole = np.array([0.0, 0.0, _dipole], dtype=np.float64) * units["Debye"]
+
+        for dipole_index in indexes[_PW_DIPOLE_DIRECTION]:
+            if image_index < dipole_index < next_index:
+                _dipole_dir = pwo_lines[dipole_index].strip().removeprefix("Computed dipole along edir(")
+                _dipole_dir = int(_dipole_dir[0])
+
+        dipole = np.eye(3)[_dipole_dir - 1] * float(_dipole) * units["Debye"]
 
         # Stress
         stress = None
