@@ -1543,7 +1543,8 @@ def kspacing_to_grid(atoms, spacing, calculated_spacing=None):
 
 def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                       kspacing=None, kpts=None, koffset=(0, 0, 0),
-                      crystal_coordinates=False, **kwargs):
+                      crystal_coordinates=False, hubbard=None, 
+                      hubbard_data=None, **kwargs):
     """
     Create an input file for pw.x.
 
@@ -1722,6 +1723,45 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                 '{coords[0]:.10f} {coords[1]:.10f} {coords[2]:.10f} '
                 '{mask}\n'.format(atom=atom, coords=coords, mask=mask))
 
+    # Make Hubbard string
+    # cross reference the simple hubbard input with pseudopotential
+    # There should be no change if nspin=1, but will have multiple entries for
+    # per atomic species with different magnetization for nspin=2
+    # Template is for hubbard keyword is:
+    # hubbard = 'atomic|orto-atomic|norm-atomic|wf|pseudo'
+    # hubbard_data = [['U', 'atomic-specie', 'manifold', u_val],
+    #                  'J', 'atomic-specie', 'manifold', j_val]]
+    #
+    # Example:
+    #    = 'atomic'
+    # hubbard_data = [['U', 'Fe', '3d', 4.0]]
+    #
+    # For nspin = 1:
+    #
+    # HUBBARD atomic
+    #   U Fe-3d 4.0
+    #
+    # For nspin = 2 (Fe mag=0.5, Fe1 mag=-0.5):
+    #
+    # HUBBARD atomic
+    #   U Fe-3d 4.0
+    #   U Fe1-3d 4.0 
+    if hubbard and hubbard_data:
+        hubbard_names = ['atomic','orto-atomic','norm-atomic','wf','pseudo']
+        assert hubbard in hubbard_names, "hubbard value is not valid!"
+        hubbard_str = 'HUBBARD {}\n'.format(hubbard)
+        
+        hubbard_data_str = []
+        for sc, species, manifold, val in hubbard_data:
+            for line in atomic_species_str:
+                full_label = line.split()[0]
+                spec_label = ''.join([i for i in full_label if not i.isdigit()])
+
+                if species == spec_label:
+                    hubbard_data_str.append('{} {}-{} {}\n'.format(
+                        sc, full_label, manifold, val))
+        hubbard_data_str = sorted(hubbard_data_str)         
+
     # Add computed parameters
     # different magnetisms means different types
     input_parameters['system']['ntyp'] = len(atomic_species)
@@ -1763,6 +1803,13 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     pwi.append('ATOMIC_SPECIES\n')
     pwi.extend(atomic_species_str)
     pwi.append('\n')
+    
+    # HUBBARD
+    if hubbard and hubbard_data:
+        pwi.append(hubbard_str)
+        pwi.extend(hubbard_data_str)
+        pwi.append('\n')
+    
 
     # KPOINTS - add a MP grid as required
     if kspacing is not None:
